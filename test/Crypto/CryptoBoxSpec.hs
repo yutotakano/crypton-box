@@ -147,3 +147,16 @@ spec = do
 
         it "checks crypto_box_beforenm fails with small order p" $ do
             isCryptoPassed (crypto_box_beforenm smallOrderP bobsk) `shouldBe` False
+
+        it "checks crypto_box_open and crypto_box_open_afternm matches expected output" $ do
+            -- once with crypto_box_open
+            let m1 = fromJust $ crypto_box_open c nonce alicepk bobsk
+
+            -- once with before/after split
+            let k = fromJust $ maybeCryptoError $ crypto_box_beforenm alicepk bobsk
+            let m2 = fromJust $ crypto_box_open_afternm c nonce k
+
+            let output = hexifier m1 <> "\n" <> hexifier m2 <> "\n"
+            contents <- liftIO $ readFile "test/Crypto/box2.exp"
+            output `shouldBe` contents
+

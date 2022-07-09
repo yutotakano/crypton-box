@@ -99,3 +99,22 @@ crypto_box_open packet nonce pk sk
     (rs, state2) = XSalsa.generate state1 32
     (content, _) = XSalsa.combine state2 c
     tag          = Poly1305.auth (rs :: B.ByteString) c
+
+crypto_box_open_afternm
+    :: B.ByteString
+    -> B.ByteString
+    -> ECC.SharedSecret
+    -> Maybe B.ByteString
+crypto_box_open_afternm packet nonce shared
+    | B.length packet < 16 = Nothing
+    | BA.constEq tag' tag  = Just content
+    | otherwise            = Nothing
+  where
+    (tag', c)    = B.splitAt 16 packet
+    zero         = B.replicate 16 0
+    (iv0, iv1)   = B.splitAt 8 nonce
+    state0       = XSalsa.initialize 20 shared (zero `B.append` iv0)
+    state1       = XSalsa.derive state0 iv1
+    (rs, state2) = XSalsa.generate state1 32
+    (content, _) = XSalsa.combine state2 c
+    tag          = Poly1305.auth (rs :: B.ByteString) c
