@@ -13,11 +13,11 @@ import Crypto.PubKey.Curve25519 qualified as X25519
 -- | Build a @crypto_box@ packet encrypting the specified content with a
 -- 192-bit nonce, receiver public key and sender private key.
 crypto_box
-  :: B.ByteString
-  -> B.ByteString
-  -> X25519.PublicKey
-  -> X25519.SecretKey
-  -> B.ByteString
+    :: B.ByteString
+    -> B.ByteString
+    -> X25519.PublicKey
+    -> X25519.SecretKey
+    -> B.ByteString
 crypto_box content nonce pk sk = BA.convert tag `B.append` c
   where
     zero         = B.replicate 16 0
@@ -32,11 +32,11 @@ crypto_box content nonce pk sk = BA.convert tag `B.append` c
 -- | Try to open a @crypto_box@ packet and recover the content using the
 -- 192-bit nonce, sender public key and receiver private key.
 crypto_box_open
-  :: B.ByteString
-  -> B.ByteString
-  -> X25519.PublicKey
-  -> X25519.SecretKey
-  -> Maybe B.ByteString
+    :: B.ByteString
+    -> B.ByteString
+    -> X25519.PublicKey
+    -> X25519.SecretKey
+    -> Maybe B.ByteString
 crypto_box_open packet nonce pk sk
     | B.length packet < 16 = Nothing
     | BA.constEq tag' tag  = Just content
