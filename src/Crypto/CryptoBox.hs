@@ -16,6 +16,11 @@ import Data.Data (Proxy(..))
 
 -- | Build a @crypto_box@ packet encrypting the specified content with a
 -- 192-bit nonce, receiver public key and sender private key.
+--
+-- This function performs no validation for the key pair, and will use an
+-- all-zero shared secret if the Diffie hellman secret value is at infinity.
+-- Use 'crypto_box_beforenm' to get just a CryptoFailable-wrapped precomputed
+-- secret if you want to verify the key pair.
 crypto_box
     :: B.ByteString
     -- ^ Message to encrypt
@@ -25,21 +30,18 @@ crypto_box
     -- ^ Public Key
     -> X25519.SecretKey
     -- ^ Private Key
-    -> CryptoFailable B.ByteString
+    -> B.ByteString
     -- ^ Ciphertext
-crypto_box content nonce pk sk = do
-    -- We use ECC.ecdh instead of X25519.dh because the former has checks in
-    -- place for when the result is at a point of infinity. This error is
-    -- encoded in the CryptoFailable monad.
-    shared <- ECC.ecdh (Proxy :: Proxy ECC.Curve_X25519) sk pk
-    let (iv0, iv1) = B.splitAt 8 nonce
-    let zero = B.replicate 16 0
-    let state0 = XSalsa.initialize 20 shared (zero `B.append` iv0)
-    let state1 = XSalsa.derive state0 iv1
-    let (rs, state2) = XSalsa.generate state1 32
-    let (c, _) = XSalsa.combine state2 content
-    let tag = Poly1305.auth (rs :: B.ByteString) c
-    return $ BA.convert tag `B.append` c
+crypto_box content nonce pk sk = BA.convert tag `B.append` c
+  where
+    shared = X25519.dh pk sk
+    (iv0, iv1) = B.splitAt 8 nonce
+    zero = B.replicate 16 0
+    state0 = XSalsa.initialize 20 shared (zero `B.append` iv0)
+    state1 = XSalsa.derive state0 iv1
+    (rs, state2) = XSalsa.generate state1 32
+    (c, _) = XSalsa.combine state2 content
+    tag = Poly1305.auth (rs :: B.ByteString) c
 
 -- | Precompute the shared key for building a @crypto_box@ packet, using the
 -- receiver public key and sender private key.
