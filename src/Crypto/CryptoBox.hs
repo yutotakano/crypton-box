@@ -28,9 +28,12 @@ crypto_box
     -> CryptoFailable B.ByteString
     -- ^ Ciphertext
 crypto_box content nonce pk sk = do
-    let zero = B.replicate 16 0
+    -- We use ECC.ecdh instead of X25519.dh because the former has checks in
+    -- place for when the result is at a point of infinity. This error is
+    -- encoded in the CryptoFailable monad.
     shared <- ECC.ecdh (Proxy :: Proxy ECC.Curve_X25519) sk pk
     let (iv0, iv1) = B.splitAt 8 nonce
+    let zero = B.replicate 16 0
     let state0 = XSalsa.initialize 20 shared (zero `B.append` iv0)
     let state1 = XSalsa.derive state0 iv1
     let (rs, state2) = XSalsa.generate state1 32
@@ -38,19 +41,30 @@ crypto_box content nonce pk sk = do
     let tag = Poly1305.auth (rs :: B.ByteString) c
     return $ BA.convert tag `B.append` c
 
+-- | Precompute the shared key for building a @crypto_box@ packet, using the
+-- receiver public key and sender private key.
 crypto_box_beforenm
     :: X25519.PublicKey
+    -- ^ Receiver public key
     -> X25519.SecretKey
+    -- ^ Sender private key
     -> CryptoFailable ECC.SharedSecret
+    -- ^ Precomputed shared secret to use with 'crypto_box_afternm'
 crypto_box_beforenm pk sk = do
     let zero = B.replicate 16 0
     ECC.ecdh (Proxy :: Proxy ECC.Curve_X25519) sk pk
 
+-- | Build a @crypto_box@ packet that encrypts the specified content with a
+-- 192-bit nonce and a precomputed shared secret.
 crypto_box_afternm
     :: B.ByteString
+    -- ^ Message to encrypt
     -> B.ByteString
+    -- ^ 192-bit nonce
     -> ECC.SharedSecret
+    -- ^ Precomputed shared secret
     -> B.ByteString
+    -- ^ Ciphertext
 crypto_box_afternm content nonce shared = BA.convert tag `B.append` c
   where
     zero         = B.replicate 16 0
