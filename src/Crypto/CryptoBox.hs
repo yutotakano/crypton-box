@@ -76,7 +76,6 @@ cryptoBoxAfterNM content nonce (State state0) = BA.convert tag `B.append` c
   where
     zero       = B.replicate 16 0
     (iv0, iv1) = B.splitAt 8 nonce
-    [iv0a, iv0b, iv0c, iv0d, iv0e, iv0f, iv0g, iv0h] = B.unpack iv0
     -- This is very hacky. The XSalsa.initialise that we performed in the beforeNM
     -- stage has mostly what we need, except for state[6] and state[7] which is
     -- where the first 8 bytes of the IV/nonce go to. Since those are currently
@@ -141,7 +140,6 @@ cryptoBoxOpenAfterNM packet nonce (State state0)
     (tag', c)    = B.splitAt 16 packet
     (iv0, iv1)   = B.splitAt 8 nonce
 
-    [iv0a, iv0b, iv0c, iv0d, iv0e, iv0f, iv0g, iv0h] = B.unpack iv0
     -- This is very hacky. The XSalsa.initialise that we performed in the beforeNM
     -- stage has mostly what we need, except for state[6] and state[7] which is
     -- where the first 8 bytes of the IV/nonce go to. Since those are currently
