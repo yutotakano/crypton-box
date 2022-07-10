@@ -21,7 +21,6 @@ secretBox
     -- ^ Ciphertext
 secretBox message nonce key = BA.convert tag `B.append` c
   where
-    (iv0, iv1)   = B.splitAt 8 nonce
     -- No need to prepend 16 bytes of zero before the nonce and then call derive
     -- with the rest. This is because secret_box directly calls
     --   crypto_secretbox_xsalsa20poly1305
