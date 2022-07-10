@@ -1,14 +1,17 @@
 name:                shecretbox
 version:             0.0.1
-description:         See the project README on GitHub for more information.
+description:         crypto_box and crypto_secret_box implementations based on
+                     cryptonite primitives. See the README on GitHub for more
+                     information.
                      <https://github.com/yutotakano/shecretbox>
-synopsis:            SecretBox
+synopsis:            crypto_box and crypto_secret_box implementations based on
+                     cryptonite primitives.
 github:              "yutotakano/shecretbox"
 license:             BSD-3
 author:              Yuto Takano
 maintainer:          "moa17stock@gmail.com"
 copyright:           "2022 Yuto Takano"
-category:            Network
+category:            Cryptography
 extra-source-files:
 - README.md
 - ChangeLog.md
@@ -23,11 +26,8 @@ dependencies:
 
 library:
   source-dirs: src
-  # The exposed-module specifies the exact order the modules will appear in the
-  # generated cabal file, and thus on Haddock. The default is alphabetical, but
-  # internals should be later.
   exposed-modules:
-  - Crypto.CryptoBox
+  - Crypto.Box
   - Crypto.SecretBox
 
 tests:

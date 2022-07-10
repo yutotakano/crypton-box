@@ -1,6 +1,6 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 
-module Crypto.CryptoBoxSpec where
+module Crypto.BoxSpec where
 
 import Data.ByteString qualified as B
 import Data.Function ((&))
@@ -11,7 +11,7 @@ import Crypto.Error
 import Crypto.PubKey.Curve25519
 import Data.Maybe (fromJust, isJust, isNothing)
 
-import Crypto.CryptoBox
+import Crypto.Box
 
 hexifier :: B.ByteString -> String
 hexifier bytes = B.unpack bytes

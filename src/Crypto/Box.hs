@@ -1,7 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 -- | As described in Crypto.Tutorial in cryptonite.
 -- https://github.com/haskell-crypto/cryptonite/blob/master/Crypto/Tutorial.hs
-module Crypto.CryptoBox where
+module Crypto.Box where
 
 import Crypto.Cipher.Salsa (State(..))
 import Crypto.Cipher.XSalsa qualified as XSalsa

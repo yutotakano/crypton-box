@@ -6,9 +6,9 @@ cabal-version: 1.12
 
 name:           shecretbox
 version:        0.0.1
-synopsis:       SecretBox
-description:    See the project README on GitHub for more information. <https://github.com/yutotakano/shecretbox>
-category:       Network
+synopsis:       crypto_box and crypto_secret_box implementations based on cryptonite primitives.
+description:    crypto_box and crypto_secret_box implementations based on cryptonite primitives. See the README on GitHub for more information. <https://github.com/yutotakano/shecretbox>
+category:       Cryptography
 homepage:       https://github.com/yutotakano/shecretbox#readme
 bug-reports:    https://github.com/yutotakano/shecretbox/issues
 author:         Yuto Takano
@@ -27,7 +27,7 @@ source-repository head
 
 library
   exposed-modules:
-      Crypto.CryptoBox
+      Crypto.Box
       Crypto.SecretBox
   other-modules:
       Paths_shecretbox
@@ -46,7 +46,7 @@ test-suite shecretbox-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Crypto.CryptoBoxSpec
+      Crypto.BoxSpec
       Crypto.SecretBoxSpec
       Paths_shecretbox
   hs-source-dirs:
