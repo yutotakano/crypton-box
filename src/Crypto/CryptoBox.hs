@@ -26,22 +26,27 @@ import GHC.IO (unsafePerformIO)
 -- Use 'cryptoBoxBeforeNM' to get just a CryptoFailable-wrapped precomputed
 -- secret if you want to verify the key pair.
 cryptoBox
-    :: B.ByteString
+    :: (BA.ByteArray content, BA.ByteArray nonce)
+    => content
     -- ^ Message to encrypt
-    -> B.ByteString
+    -> nonce
     -- ^ 192-bit nonce
     -> X25519.PublicKey
     -- ^ Public Key
     -> X25519.SecretKey
     -- ^ Private Key
-    -> B.ByteString
+    -> content
     -- ^ Ciphertext
-cryptoBox message nonce pk sk = BA.convert tag `B.append` c
+cryptoBox message nonce pk sk = BA.convert tag `BA.append` c
+  -- convert the tag from Auth to ByteString (reallocating), instead of
+  -- converting both of them to a polymorphic (ByteArrayAccess ciphertext),
+  -- preventing unnecessary conversion. People who need other byte access types
+  -- can convert it themselves.
   where
     shared = X25519.dh pk sk
-    (iv0, iv1) = B.splitAt 8 nonce
-    zero = B.replicate 16 0
-    state0 = XSalsa.initialize 20 shared (zero `B.append` iv0)
+    (iv0, iv1) = BA.splitAt 8 nonce
+    zero = BA.zero 16
+    state0 = XSalsa.initialize 20 shared (zero `BA.append` iv0)
     state1 = XSalsa.derive state0 iv1
     (rs, state2) = XSalsa.generate state1 32
     (c, _) = XSalsa.combine state2 message
@@ -64,18 +69,19 @@ cryptoBoxBeforeNM pk sk = do
 -- | Build a @crypto_box@ packet that encrypts the specified content with a
 -- 192-bit nonce and a precomputed shared secret.
 cryptoBoxAfterNM
-    :: B.ByteString
+    :: (BA.ByteArray content, BA.ByteArray nonce)
+    => content
     -- ^ Message to encrypt
-    -> B.ByteString
+    -> nonce
     -- ^ 192-bit nonce
     -> XSalsa.State
     -- ^ Precomputed shared secret
-    -> B.ByteString
+    -> content
     -- ^ Ciphertext
-cryptoBoxAfterNM content nonce (State state0) = BA.convert tag `B.append` c
+cryptoBoxAfterNM message nonce (State state0) = BA.convert tag `BA.append` c
   where
     zero       = B.replicate 16 0
-    (iv0, iv1) = B.splitAt 8 nonce
+    (iv0, iv1) = BA.splitAt 8 nonce
     -- This is very hacky. The XSalsa.initialise that we performed in the beforeNM
     -- stage has mostly what we need, except for state[6] and state[7] which is
     -- where the first 8 bytes of the IV/nonce go to. Since those are currently
@@ -87,7 +93,7 @@ cryptoBoxAfterNM content nonce (State state0) = BA.convert tag `B.append` c
             -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
             -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
             -- because the base type is uint32.
-            B.unpack iv0
+            BA.unpack iv0
                 & zip [24..31]
                 & traverse_ (\(i, word) ->
                     Storable.poke (state0Ptr `Ptr.plusPtr` i) word)
@@ -101,44 +107,46 @@ cryptoBoxAfterNM content nonce (State state0) = BA.convert tag `B.append` c
 
     state2       = XSalsa.derive state1 iv1
     (rs, state3) = XSalsa.generate state2 32
-    (c, _)       = XSalsa.combine state3 content
+    (c, _)       = XSalsa.combine state3 message
     tag          = Poly1305.auth (rs :: B.ByteString) c
 
 -- | Try to open a @crypto_box@ packet and recover the content using the
 -- 192-bit nonce, sender public key and receiver private key.
 cryptoBoxOpen
-    :: B.ByteString
-    -> B.ByteString
+    :: (BA.ByteArray content, BA.ByteArray nonce)
+    => content
+    -> nonce
     -> X25519.PublicKey
     -> X25519.SecretKey
-    -> Maybe B.ByteString
+    -> Maybe content
 cryptoBoxOpen packet nonce pk sk
-    | B.length packet < 16 = Nothing
+    | BA.length packet < 16 = Nothing
     | BA.constEq tag' tag  = Just content
     | otherwise            = Nothing
   where
-    (tag', c)    = B.splitAt 16 packet
-    zero         = B.replicate 16 0
+    (tag', c)    = BA.splitAt 16 packet
+    zero         = BA.zero 16
     shared       = X25519.dh pk sk
-    (iv0, iv1)   = B.splitAt 8 nonce
-    state0       = XSalsa.initialize 20 shared (zero `B.append` iv0)
+    (iv0, iv1)   = BA.splitAt 8 nonce
+    state0       = XSalsa.initialize 20 shared (zero `BA.append` iv0)
     state1       = XSalsa.derive state0 iv1
     (rs, state2) = XSalsa.generate state1 32
     (content, _) = XSalsa.combine state2 c
     tag          = Poly1305.auth (rs :: B.ByteString) c
 
 cryptoBoxOpenAfterNM
-    :: B.ByteString
-    -> B.ByteString
+    :: (BA.ByteArray content, BA.ByteArray nonce)
+    => content
+    -> nonce
     -> XSalsa.State
-    -> Maybe B.ByteString
+    -> Maybe content
 cryptoBoxOpenAfterNM packet nonce (State state0)
-    | B.length packet < 16 = Nothing
+    | BA.length packet < 16 = Nothing
     | BA.constEq tag' tag  = Just content
     | otherwise            = Nothing
   where
-    (tag', c)    = B.splitAt 16 packet
-    (iv0, iv1)   = B.splitAt 8 nonce
+    (tag', c)    = BA.splitAt 16 packet
+    (iv0, iv1)   = BA.splitAt 8 nonce
 
     -- This is very hacky. The XSalsa.initialise that we performed in the beforeNM
     -- stage has mostly what we need, except for state[6] and state[7] which is
@@ -151,7 +159,7 @@ cryptoBoxOpenAfterNM packet nonce (State state0)
             -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
             -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
             -- because the base type is uint32.
-            B.unpack iv0
+            BA.unpack iv0
                 & zip [24..31]
                 & traverse_ (\(i, word) ->
                     Storable.poke (state0Ptr `Ptr.plusPtr` i) word)
