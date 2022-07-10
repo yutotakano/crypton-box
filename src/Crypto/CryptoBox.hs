@@ -12,6 +12,8 @@ import Crypto.PubKey.Curve25519 qualified as X25519
 import Data.ByteArray qualified as BA
 import Data.ByteString qualified as B
 import Data.Data (Proxy(..))
+import Data.Function ((&))
+import Data.Foldable (traverse_)
 import Foreign.Ptr qualified as Ptr
 import Foreign.Storable qualified as Storable
 import GHC.IO (unsafePerformIO)
@@ -86,15 +88,16 @@ cryptoBoxAfterNM content nonce (State state0) = BA.convert tag `B.append` c
             -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
             -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
             -- because the base type is uint32.
-            Storable.poke (state0Ptr `Ptr.plusPtr` 24) iv0a
-            Storable.poke (state0Ptr `Ptr.plusPtr` 25) iv0b
-            Storable.poke (state0Ptr `Ptr.plusPtr` 26) iv0c
-            Storable.poke (state0Ptr `Ptr.plusPtr` 27) iv0d
-            Storable.poke (state0Ptr `Ptr.plusPtr` 28) iv0e
-            Storable.poke (state0Ptr `Ptr.plusPtr` 29) iv0f
-            Storable.poke (state0Ptr `Ptr.plusPtr` 30) iv0g
-            Storable.poke (state0Ptr `Ptr.plusPtr` 31) iv0h
+            B.unpack iv0
+                & zip [24..31]
+                & traverse_ (\(i, word) ->
+                    Storable.poke (state0Ptr `Ptr.plusPtr` i) word)
+            -- Return the 132 bytes that is the size of the State struct
+            -- This is how much is allocated when you look at the source of
+            -- XSalsa.initialize, and the struct contents are defined here:
+            -- https://github.com/haskell-crypto/cryptonite/blob/cf89276b5cdd87fcd60cce2fb424e64f0de7016a/cbits/cryptonite_salsa.h
             pure $ BA.MemView state0Ptr 132
+        -- Convert from a pointer to Words to a pointer to State
         pure $ State $ BA.convert $ memview
 
     state2       = XSalsa.derive state1 iv1
@@ -150,15 +153,16 @@ cryptoBoxOpenAfterNM packet nonce (State state0)
             -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
             -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
             -- because the base type is uint32.
-            Storable.poke (state0Ptr `Ptr.plusPtr` 24) iv0a
-            Storable.poke (state0Ptr `Ptr.plusPtr` 25) iv0b
-            Storable.poke (state0Ptr `Ptr.plusPtr` 26) iv0c
-            Storable.poke (state0Ptr `Ptr.plusPtr` 27) iv0d
-            Storable.poke (state0Ptr `Ptr.plusPtr` 28) iv0e
-            Storable.poke (state0Ptr `Ptr.plusPtr` 29) iv0f
-            Storable.poke (state0Ptr `Ptr.plusPtr` 30) iv0g
-            Storable.poke (state0Ptr `Ptr.plusPtr` 31) iv0h
+            B.unpack iv0
+                & zip [24..31]
+                & traverse_ (\(i, word) ->
+                    Storable.poke (state0Ptr `Ptr.plusPtr` i) word)
+            -- Return the 132 bytes that is the size of the State struct
+            -- This is how much is allocated when you look at the source of
+            -- XSalsa.initialize, and the struct contents are defined here:
+            -- https://github.com/haskell-crypto/cryptonite/blob/cf89276b5cdd87fcd60cce2fb424e64f0de7016a/cbits/cryptonite_salsa.h
             pure $ BA.MemView state0Ptr 132
+        -- Convert from a pointer to Words to a pointer to State
         pure $ State $ BA.convert $ memview
 
     state2       = XSalsa.derive state1 iv1
