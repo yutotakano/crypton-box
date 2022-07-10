@@ -19,5 +19,5 @@ encrypted :: B.ByteString
 encrypted = Box.create message nonce secret
 
 decrypted :: B.ByteString
-decrypted = Box.open message nonce secret
+decrypted = Box.open encrypted nonce secret
 ```
