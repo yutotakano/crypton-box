@@ -73,26 +73,26 @@ spec = do
 
         -- We use `shouldBe` instead of `shouldSatisfy` because ECC.SharedSecret
         -- has no Show instance.
-        it "checks crypto_box_beforenm doesn't fail with valid data" $ do
-            isCryptoPassed (crypto_box_beforenm bobpk alicesk) `shouldBe` True
+        it "checks cryptoBoxBeforeNM doesn't fail with valid data" $ do
+            isCryptoPassed (cryptoBoxBeforeNM bobpk alicesk) `shouldBe` True
 
         it "checks crypto_box_beforenm fails with small order p" $ do
-            isCryptoPassed (crypto_box_beforenm smallOrderP alicesk) `shouldBe` False
+            isCryptoPassed (cryptoBoxBeforeNM smallOrderP alicesk) `shouldBe` False
 
-        it "checks crypto_box and cryptobox_afternm match expected output" $ do
-            -- once with crypto_box
-            let c1 = crypto_box m nonce bobpk alicesk
+        it "checks cryptoBox and cryptoBoxAfterNM match expected output" $ do
+            -- once with cryptoBox
+            let c1 = cryptoBox m nonce bobpk alicesk
 
             -- once with before/after split
-            let k = fromJust $ maybeCryptoError $ crypto_box_beforenm bobpk alicesk
-            let c2 = crypto_box_afternm m nonce k
+            let k = fromJust $ maybeCryptoError $ cryptoBoxBeforeNM bobpk alicesk
+            let c2 = cryptoBoxAfterNM m nonce k
 
             let output = hexifier c1 <> "\n" <> hexifier c2 <> "\n"
             contents <- liftIO $ readFile "test/Crypto/box.exp"
             output `shouldBe` contents
 
     -- Taken from https://github.com/jedisct1/libsodium/blob/master/test/default/box.c
-    describe "cryptobox check 1 (box.exp)" $ do
+    describe "cryptobox check 2 (box2.exp)" $ do
         let bobskFailable = secretKey $ B.pack
                 [ 0x5d, 0xab, 0x08, 0x7e, 0x62, 0x4a, 0x8a
                 , 0x4b, 0x79, 0xe1, 0x7f, 0x8b, 0x83, 0x80
@@ -136,25 +136,25 @@ spec = do
                 , 0x79, 0x73, 0xf6, 0x22, 0xa4, 0x3d, 0x14, 0xa6, 0x59, 0x9b, 0x1f, 0x65
                 , 0x4c, 0xb4, 0x5a, 0x74, 0xe3, 0x55, 0xa5
                 ]
-        it "checks crypto_box_open doesn't fail with valid data" $ do
-            crypto_box_open c nonce alicepk bobsk `shouldSatisfy` isJust
+        it "checks cryptoBoxOpen doesn't fail with valid data" $ do
+            cryptoBoxOpen c nonce alicepk bobsk `shouldSatisfy` isJust
 
         it "checks crypto_box_open fails with small order p" $ do
-            crypto_box_open c nonce smallOrderP bobsk `shouldSatisfy` isNothing
+            cryptoBoxOpen c nonce smallOrderP bobsk `shouldSatisfy` isNothing
 
-        it "checks crypto_box_beforenm doesn't fail with valid data" $ do
-            isCryptoPassed (crypto_box_beforenm alicepk bobsk) `shouldBe` True
+        it "checks cryptoBoxBeforeNM doesn't fail with valid data" $ do
+            isCryptoPassed (cryptoBoxBeforeNM alicepk bobsk) `shouldBe` True
 
-        it "checks crypto_box_beforenm fails with small order p" $ do
-            isCryptoPassed (crypto_box_beforenm smallOrderP bobsk) `shouldBe` False
+        it "checks cryptoBoxBeforeNM fails with small order p" $ do
+            isCryptoPassed (cryptoBoxBeforeNM smallOrderP bobsk) `shouldBe` False
 
-        it "checks crypto_box_open and crypto_box_open_afternm matches expected output" $ do
-            -- once with crypto_box_open
-            let m1 = fromJust $ crypto_box_open c nonce alicepk bobsk
+        it "checks cryptoBoxOpen and cryptoBoxOpenAfterNM matches expected output" $ do
+            -- once with cryptoBoxOpen
+            let m1 = fromJust $ cryptoBoxOpen c nonce alicepk bobsk
 
             -- once with before/after split
-            let k = fromJust $ maybeCryptoError $ crypto_box_beforenm alicepk bobsk
-            let m2 = fromJust $ crypto_box_open_afternm c nonce k
+            let k = fromJust $ maybeCryptoError $ cryptoBoxBeforeNM alicepk bobsk
+            let m2 = fromJust $ cryptoBoxOpenAfterNM c nonce k
 
             let output = hexifier m1 <> "\n" <> hexifier m2 <> "\n"
             contents <- liftIO $ readFile "test/Crypto/box2.exp"
