@@ -13,6 +13,11 @@ import Crypto.Error (CryptoFailable(..), maybeCryptoError, CryptoError(..))
 import Crypto.ECC qualified as ECC
 import Data.Maybe (fromJust)
 import Data.Data (Proxy(..))
+import Crypto.Cipher.Salsa (State(..))
+import Crypto.Cipher.Salsa qualified as Salsa
+import Foreign.Ptr qualified as Ptr
+import Foreign.Storable qualified as Storable
+import GHC.IO (unsafePerformIO)
 
 -- | Build a @crypto_box@ packet encrypting the specified content with a
 -- 192-bit nonce, receiver public key and sender private key.
@@ -32,7 +37,7 @@ crypto_box
     -- ^ Private Key
     -> B.ByteString
     -- ^ Ciphertext
-crypto_box content nonce pk sk = BA.convert tag `B.append` c
+crypto_box message nonce pk sk = BA.convert tag `B.append` c
   where
     shared = X25519.dh pk sk
     (iv0, iv1) = B.splitAt 8 nonce
@@ -40,7 +45,7 @@ crypto_box content nonce pk sk = BA.convert tag `B.append` c
     state0 = XSalsa.initialize 20 shared (zero `B.append` iv0)
     state1 = XSalsa.derive state0 iv1
     (rs, state2) = XSalsa.generate state1 32
-    (c, _) = XSalsa.combine state2 content
+    (c, _) = XSalsa.combine state2 message
     tag = Poly1305.auth (rs :: B.ByteString) c
 
 -- | Precompute the shared key for building a @crypto_box@ packet, using the
@@ -50,11 +55,12 @@ crypto_box_beforenm
     -- ^ Receiver public key
     -> X25519.SecretKey
     -- ^ Sender private key
-    -> CryptoFailable ECC.SharedSecret
+    -> CryptoFailable XSalsa.State
     -- ^ Precomputed shared secret to use with 'crypto_box_afternm'
 crypto_box_beforenm pk sk = do
-    let zero = B.replicate 16 0
-    ECC.ecdh (Proxy :: Proxy ECC.Curve_X25519) sk pk
+    let zero = B.replicate 24 0
+    shared <- ECC.ecdh (Proxy :: Proxy ECC.Curve_X25519) sk pk
+    pure $ XSalsa.initialize 20 shared zero
 
 -- | Build a @crypto_box@ packet that encrypts the specified content with a
 -- 192-bit nonce and a precomputed shared secret.
@@ -63,18 +69,40 @@ crypto_box_afternm
     -- ^ Message to encrypt
     -> B.ByteString
     -- ^ 192-bit nonce
-    -> ECC.SharedSecret
+    -> XSalsa.State
     -- ^ Precomputed shared secret
     -> B.ByteString
     -- ^ Ciphertext
-crypto_box_afternm content nonce shared = BA.convert tag `B.append` c
+crypto_box_afternm content nonce (State state0) = BA.convert tag `B.append` c
   where
-    zero         = B.replicate 16 0
-    (iv0, iv1)   = B.splitAt 8 nonce
-    state0       = XSalsa.initialize 20 shared (zero `B.append` iv0)
-    state1       = XSalsa.derive state0 iv1
-    (rs, state2) = XSalsa.generate state1 32
-    (c, _)       = XSalsa.combine state2 content
+    zero       = B.replicate 16 0
+    (iv0, iv1) = B.splitAt 8 nonce
+    [iv0a, iv0b, iv0c, iv0d, iv0e, iv0f, iv0g, iv0h] = B.unpack iv0
+    -- This is very hacky. The XSalsa.initialise that we performed in the beforeNM
+    -- stage has mostly what we need, except for state[6] and state[7] which is
+    -- where the first 8 bytes of the IV/nonce go to. Since those are currently
+    -- zero because we used zeros during the beforeNM (we didn't know the nonce),
+    -- we now need to poke into that pointer location and overwrite its contents.
+    state1     = unsafePerformIO $ do
+        memview <- BA.withByteArray state0 $ \state0Ptr -> do
+            -- We start writing at byte 24, this is 6*4 where 6 is the location
+            -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
+            -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
+            -- because the base type is uint32.
+            Storable.poke (state0Ptr `Ptr.plusPtr` 24) iv0a
+            Storable.poke (state0Ptr `Ptr.plusPtr` 25) iv0b
+            Storable.poke (state0Ptr `Ptr.plusPtr` 26) iv0c
+            Storable.poke (state0Ptr `Ptr.plusPtr` 27) iv0d
+            Storable.poke (state0Ptr `Ptr.plusPtr` 28) iv0e
+            Storable.poke (state0Ptr `Ptr.plusPtr` 29) iv0f
+            Storable.poke (state0Ptr `Ptr.plusPtr` 30) iv0g
+            Storable.poke (state0Ptr `Ptr.plusPtr` 31) iv0h
+            pure $ BA.MemView state0Ptr 132
+        pure $ State $ BA.convert $ memview
+
+    state2       = XSalsa.derive state1 iv1
+    (rs, state3) = XSalsa.generate state2 32
+    (c, _)       = XSalsa.combine state3 content
     tag          = Poly1305.auth (rs :: B.ByteString) c
 
 -- | Try to open a @crypto_box@ packet and recover the content using the
@@ -103,18 +131,40 @@ crypto_box_open packet nonce pk sk
 crypto_box_open_afternm
     :: B.ByteString
     -> B.ByteString
-    -> ECC.SharedSecret
+    -> XSalsa.State
     -> Maybe B.ByteString
-crypto_box_open_afternm packet nonce shared
+crypto_box_open_afternm packet nonce (State state0)
     | B.length packet < 16 = Nothing
     | BA.constEq tag' tag  = Just content
     | otherwise            = Nothing
   where
     (tag', c)    = B.splitAt 16 packet
-    zero         = B.replicate 16 0
     (iv0, iv1)   = B.splitAt 8 nonce
-    state0       = XSalsa.initialize 20 shared (zero `B.append` iv0)
-    state1       = XSalsa.derive state0 iv1
-    (rs, state2) = XSalsa.generate state1 32
-    (content, _) = XSalsa.combine state2 c
+
+    [iv0a, iv0b, iv0c, iv0d, iv0e, iv0f, iv0g, iv0h] = B.unpack iv0
+    -- This is very hacky. The XSalsa.initialise that we performed in the beforeNM
+    -- stage has mostly what we need, except for state[6] and state[7] which is
+    -- where the first 8 bytes of the IV/nonce go to. Since those are currently
+    -- zero because we used zeros during the beforeNM (we didn't know the nonce),
+    -- we now need to poke into that pointer location and overwrite its contents.
+    state1     = unsafePerformIO $ do
+        memview <- BA.withByteArray state0 $ \state0Ptr -> do
+            -- We start writing at byte 24, this is 6*4 where 6 is the location
+            -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
+            -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
+            -- because the base type is uint32.
+            Storable.poke (state0Ptr `Ptr.plusPtr` 24) iv0a
+            Storable.poke (state0Ptr `Ptr.plusPtr` 25) iv0b
+            Storable.poke (state0Ptr `Ptr.plusPtr` 26) iv0c
+            Storable.poke (state0Ptr `Ptr.plusPtr` 27) iv0d
+            Storable.poke (state0Ptr `Ptr.plusPtr` 28) iv0e
+            Storable.poke (state0Ptr `Ptr.plusPtr` 29) iv0f
+            Storable.poke (state0Ptr `Ptr.plusPtr` 30) iv0g
+            Storable.poke (state0Ptr `Ptr.plusPtr` 31) iv0h
+            pure $ BA.MemView state0Ptr 132
+        pure $ State $ BA.convert $ memview
+
+    state2       = XSalsa.derive state1 iv1
+    (rs, state3) = XSalsa.generate state2 32
+    (content, _) = XSalsa.combine state3 c
     tag          = Poly1305.auth (rs :: B.ByteString) c
