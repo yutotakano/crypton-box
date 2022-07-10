@@ -28,6 +28,7 @@ library:
   # internals should be later.
   exposed-modules:
   - Crypto.CryptoBox
+  - Crypto.SecretBox
 
 tests:
   shecretbox-test:

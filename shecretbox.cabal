@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Crypto.CryptoBox
+      Crypto.SecretBox
   other-modules:
       Paths_shecretbox
   hs-source-dirs:
@@ -46,6 +47,7 @@ test-suite shecretbox-test
   main-is: Spec.hs
   other-modules:
       Crypto.CryptoBoxSpec
+      Crypto.SecretBoxSpec
       Paths_shecretbox
   hs-source-dirs:
       test
