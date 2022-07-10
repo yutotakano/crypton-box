@@ -11,7 +11,7 @@ import Crypto.Error
 import Crypto.PubKey.Curve25519
 import Data.Maybe (fromJust, isJust, isNothing)
 
-import Crypto.SecretBox
+import qualified Crypto.SecretBox as SecretBox
 
 hexifier :: B.ByteString -> String
 hexifier bytes = B.unpack bytes
@@ -61,12 +61,12 @@ spec = do
                 , 0x76, 0x38, 0x48, 0x64, 0x5e, 0x07, 0x05
                 ]
 
-        it "checks secretBox matches expected output" $ do
+        it "checks SecretBox.create matches expected output" $ do
             -- once with secretBox
-            let c1 = secretBox m nonce firstkey
+            let c1 = SecretBox.create m nonce firstkey
 
             -- once again
-            let c2 = secretBox m nonce firstkey
+            let c2 = SecretBox.create m nonce firstkey
 
             let output = hexifier c1 <> "\n" <> hexifier c2 <> "\n"
             contents <- liftIO $ readFile "test/Crypto/secretbox.exp"
@@ -103,9 +103,9 @@ spec = do
                 , 0x79, 0x73, 0xf6, 0x22, 0xa4, 0x3d, 0x14, 0xa6, 0x59, 0x9b, 0x1f, 0x65
                 , 0x4c, 0xb4, 0x5a, 0x74, 0xe3, 0x55, 0xa5
                 ]
-        it "checks secretBoxOpen matches expected output" $ do
+        it "checks SecretBox.open matches expected output" $ do
             -- once with secretBoxOpen
-            let m = fromJust $ secretBoxOpen c nonce firstkey
+            let m = fromJust $ SecretBox.open c nonce firstkey
 
             let output = hexifier m <> "\n"
             contents <- liftIO $ readFile "test/Crypto/secretbox2.exp"

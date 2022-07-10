@@ -10,7 +10,7 @@ import Crypto.PubKey.Curve25519 qualified as X25519
 
 -- | Build a @secret_box@ packet encrypting the specified content with a
 -- 192-bit nonce and a 256-bit symmetric secret key.
-secretBox
+create
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
     -- ^ Message to encrypt
@@ -20,7 +20,7 @@ secretBox
     -- ^ Symmetric secret key
     -> content
     -- ^ Ciphertext
-secretBox message nonce key = BA.convert tag `BA.append` c
+create message nonce key = BA.convert tag `BA.append` c
   where
     -- No need to prepend 16 bytes of zero before the nonce and then call derive
     -- with the rest. This is because secret_box directly calls
@@ -44,7 +44,7 @@ secretBox message nonce key = BA.convert tag `BA.append` c
 
 -- -- | Try to open a @secret_box@ packet and recover the content using the
 -- -- 192-bit nonce and a 256-bit symmetric secret key.
-secretBoxOpen
+open
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
     -- ^ Ciphertext to decrypt
@@ -54,7 +54,7 @@ secretBoxOpen
     -- ^ Symmetric secret key
     -> Maybe content
     -- ^ Message
-secretBoxOpen packet nonce key
+open packet nonce key
     | BA.length packet < 16 = Nothing
     | BA.constEq tag' tag  = Just content
     | otherwise            = Nothing
