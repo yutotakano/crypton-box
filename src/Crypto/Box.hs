@@ -93,6 +93,10 @@ createAfterNM message nonce (State state0) = BA.convert tag `BA.append` c
             -- that the 16th byte of the 24-byte IV (the first 16 are zeros even
             -- if we use cryptoBox) passed to xsalsa is written to, and 4 is
             -- because the base type is uint32.
+            --
+            -- TODO: This currently relies on the system endianness since we're
+            -- writing the nonce bytes one by one instead of as a little-endian
+            -- 32-bit chunk. This needs to be made system-agnostic.
             BA.unpack iv0
                 & zip [24..31]
                 & traverse_ (\(i, word) ->
