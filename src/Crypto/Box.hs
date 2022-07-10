@@ -23,8 +23,8 @@ import GHC.IO (unsafePerformIO)
 --
 -- This function performs no validation for the key pair, and will use an
 -- all-zero shared secret if the Diffie hellman secret value is at infinity.
--- Use 'cryptoBoxBeforeNM' to get just a CryptoFailable-wrapped precomputed
--- secret if you want to verify the key pair.
+-- Use 'Box.beforeNM' to get only the precomputed secret if you want to verify
+-- the key pair before use.
 create
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
@@ -32,9 +32,9 @@ create
     -> nonce
     -- ^ 192-bit nonce
     -> X25519.PublicKey
-    -- ^ Public Key
+    -- ^ Receiver's public key
     -> X25519.SecretKey
-    -- ^ Private Key
+    -- ^ Sender's private key
     -> content
     -- ^ Ciphertext
 create message nonce pk sk = BA.convert tag `BA.append` c
@@ -52,22 +52,31 @@ create message nonce pk sk = BA.convert tag `BA.append` c
     (c, _) = XSalsa.combine state2 message
     tag = Poly1305.auth (rs :: B.ByteString) c
 
--- | Precompute the shared key for building a @crypto_box@ packet, using the
--- receiver public key and sender private key.
+-- | Precompute the shared key for building a @crypto_box@ packet.
+-- This function first computes the shared secret using the receiver public key
+-- and sender private key. Then, a first-level key is computed using HSalsa20
+-- with the shared secret and a nonce of zero. This is as described in section
+-- 7 (page 15) of https://cr.yp.to/highspeed/naclcrypto-20090310.pdf.
+--
+-- The function returns a XSalsa State that contains the first-level key.
+--
+-- May fail if the Diffie hellman secret value is at infinity. See 'ECC.ecdh' for
+-- more information.
 beforeNM
     :: X25519.PublicKey
     -- ^ Receiver public key
     -> X25519.SecretKey
     -- ^ Sender private key
     -> CryptoFailable XSalsa.State
-    -- ^ Precomputed shared secret to use with 'crypto_box_afternm'
+    -- ^ XSalsa State that contains the precomputed first-level key to use with 'createAfterNM' or 'openAfterNM'
 beforeNM pk sk = do
     let zero = B.replicate 24 0
     shared <- ECC.ecdh (Proxy :: Proxy ECC.Curve_X25519) sk pk
     pure $ XSalsa.initialize 20 shared zero
 
 -- | Build a @crypto_box@ packet that encrypts the specified content with a
--- 192-bit nonce and a precomputed shared secret.
+-- 192-bit nonce and a state containing the precomputed first-level key.
+-- Use 'beforeNM' to create such a state.
 createAfterNM
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
@@ -75,7 +84,7 @@ createAfterNM
     -> nonce
     -- ^ 192-bit nonce
     -> XSalsa.State
-    -- ^ Precomputed shared secret
+    -- ^ XSalsa State that contains the precomputed first-level key
     -> content
     -- ^ Ciphertext
 createAfterNM message nonce (State state0) = BA.convert tag `BA.append` c
@@ -116,13 +125,23 @@ createAfterNM message nonce (State state0) = BA.convert tag `BA.append` c
 
 -- | Try to open a @crypto_box@ packet and recover the content using the
 -- 192-bit nonce, sender public key and receiver private key.
+--
+-- This function performs no validation for the key pair, and will use an
+-- all-zero shared secret if the Diffie hellman secret value is at infinity.
+-- Use 'Box.beforeNM' to get only the precomputed secret if you want to verify
+-- the key pair before use.
 open
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
+    -- ^ Ciphertext to decrypt
     -> nonce
+    -- ^ 192-bit nonce
     -> X25519.PublicKey
+    -- ^ Sender's public key
     -> X25519.SecretKey
+    -- ^ Receiver's private key
     -> Maybe content
+    -- ^ Plaintext
 open packet nonce pk sk
     | BA.length packet < 16 = Nothing
     | BA.constEq tag' tag  = Just content
@@ -138,11 +157,17 @@ open packet nonce pk sk
     (content, _) = XSalsa.combine state2 c
     tag          = Poly1305.auth (rs :: B.ByteString) c
 
+-- | Try to open a @crypto_box@ packet and recover the content using the
+-- 192-bit nonce and a state containing the precomputed first-level key.
+-- Use 'beforeNM' to create such a state.
 openAfterNM
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
+    -- ^ Ciphertext
     -> nonce
+    -- ^ 192-bit nonce
     -> XSalsa.State
+    -- ^ XSalsa State that contains the precomputed first-level key
     -> Maybe content
 openAfterNM packet nonce (State state0)
     | BA.length packet < 16 = Nothing

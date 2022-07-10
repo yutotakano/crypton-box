@@ -42,8 +42,8 @@ create message nonce key = BA.convert tag `BA.append` c
     (c, _)       = XSalsa.combine state1 message
     tag          = Poly1305.auth (rs :: B.ByteString) c
 
--- -- | Try to open a @secret_box@ packet and recover the content using the
--- -- 192-bit nonce and a 256-bit symmetric secret key.
+-- | Try to open a @secret_box@ packet and recover the content using the
+-- 192-bit nonce and a 256-bit symmetric secret key.
 open
     :: (BA.ByteArray content, BA.ByteArray nonce)
     => content
