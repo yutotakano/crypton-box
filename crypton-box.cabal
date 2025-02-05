@@ -2,8 +2,21 @@ cabal-version: 1.12
 
 name:           crypton-box
 version:        1.1.0
-synopsis:       NaCl crypto_box and crypto_secret_box implementations based on crypton primitives.
-description:    NaCl crypto_box and crypto_secret_box implementations based on crypton primitives. See the README on GitHub for more information. <https://github.com/yutotakano/crypton-box>
+synopsis:       NaCl crypto/secret box implementations based on crypton primitives.
+description:
+    This library provides a high-level API for authenticated encryption and
+    decryption using the NaCl [crypto_box](https://nacl.cr.yp.to/box.html) and
+    [crypto_secretbox](https://nacl.cr.yp.to/secretbox.html) constructs.
+    .
+    The API is implemented in pure Haskell using XSalsa and Poly1305 primitives
+    provided by the [crypton](https://hackage.haskell.org/package/crypton) library.
+    .
+    __Important: This library has not been professionally reviewed. Side__
+    __channel attacks and memory-related vulnerabilities may exist! Use at your__
+    __own risk.__
+    .
+    /(P.S. I would love to hear from you if you can audit this library and/
+    /improve its security!)/
 category:       Cryptography
 homepage:       https://github.com/yutotakano/crypton-box#readme
 bug-reports:    https://github.com/yutotakano/crypton-box/issues
