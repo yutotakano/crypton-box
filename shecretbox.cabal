@@ -13,7 +13,7 @@ homepage:       https://github.com/yutotakano/shecretbox#readme
 bug-reports:    https://github.com/yutotakano/shecretbox/issues
 author:         Yuto Takano
 maintainer:     moa17stock@gmail.com
-copyright:      2024 Yuto Takano
+copyright:      2025 Yuto Takano
 license:        BSD-3
 license-file:   LICENSE
 build-type:     Simple
@@ -53,6 +53,8 @@ test-suite shecretbox-test
       test
   default-extensions:
       OverloadedStrings
+  build-tool-depends:
+      hspec-discover:hspec-discover
   build-depends:
       base >=4.7 && <5
     , bytestring
