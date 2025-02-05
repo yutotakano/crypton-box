@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           shecretbox
-version:        0.0.1
+version:        1.0.0
 synopsis:       crypto_box and crypto_secret_box implementations based on cryptonite primitives.
 description:    crypto_box and crypto_secret_box implementations based on cryptonite primitives. See the README on GitHub for more information. <https://github.com/yutotakano/shecretbox>
 category:       Cryptography
@@ -13,7 +13,7 @@ homepage:       https://github.com/yutotakano/shecretbox#readme
 bug-reports:    https://github.com/yutotakano/shecretbox/issues
 author:         Yuto Takano
 maintainer:     moa17stock@gmail.com
-copyright:      2022 Yuto Takano
+copyright:      2024 Yuto Takano
 license:        BSD-3
 license-file:   LICENSE
 build-type:     Simple
