@@ -14,7 +14,7 @@ bug-reports:    https://github.com/yutotakano/shecretbox/issues
 author:         Yuto Takano
 maintainer:     moa17stock@gmail.com
 copyright:      2025 Yuto Takano
-license:        BSD-3
+license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
