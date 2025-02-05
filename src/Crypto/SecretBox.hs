@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+-- | This module provides the creation and opening of a secret_box.
 module Crypto.SecretBox where
 
 import Data.ByteArray qualified as BA

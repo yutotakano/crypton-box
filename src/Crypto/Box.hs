@@ -1,6 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
--- | As described in Crypto.Tutorial in cryptonite.
--- https://github.com/haskell-crypto/cryptonite/blob/master/Crypto/Tutorial.hs
+-- | This module provides the creation and opening of a crypto_box.
 module Crypto.Box where
 
 import Crypto.Cipher.Salsa (State(..))
@@ -17,6 +16,10 @@ import Data.Foldable (traverse_)
 import Foreign.Ptr qualified as Ptr
 import Foreign.Storable qualified as Storable
 import GHC.IO (unsafePerformIO)
+
+-- The implementation in this module is based off a small snippet of code from
+-- the cryptonite library, which is licensed under the BSD3 license.
+-- https://github.com/haskell-crypto/cryptonite/blob/master/Crypto/Tutorial.hs
 
 -- | Build a @crypto_box@ packet encrypting the specified content with a
 -- 192-bit nonce, receiver public key and sender private key.
