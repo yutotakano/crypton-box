@@ -1,16 +1,12 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
---
--- see: https://github.com/sol/hpack
-
-name:           shecretbox
-version:        1.0.0
-synopsis:       crypto_box and crypto_secret_box implementations based on cryptonite primitives.
-description:    crypto_box and crypto_secret_box implementations based on cryptonite primitives. See the README on GitHub for more information. <https://github.com/yutotakano/shecretbox>
+name:           crypton-box
+version:        1.1.0
+synopsis:       NaCl crypto_box and crypto_secret_box implementations based on crypton primitives.
+description:    NaCl crypto_box and crypto_secret_box implementations based on crypton primitives. See the README on GitHub for more information. <https://github.com/yutotakano/crypton-box>
 category:       Cryptography
-homepage:       https://github.com/yutotakano/shecretbox#readme
-bug-reports:    https://github.com/yutotakano/shecretbox/issues
+homepage:       https://github.com/yutotakano/crypton-box#readme
+bug-reports:    https://github.com/yutotakano/crypton-box/issues
 author:         Yuto Takano
 maintainer:     moa17stock@gmail.com
 copyright:      2025 Yuto Takano
@@ -26,14 +22,12 @@ tested-with:
 
 source-repository head
   type: git
-  location: https://github.com/yutotakano/shecretbox
+  location: https://github.com/yutotakano/crypton-box
 
 library
   exposed-modules:
       Crypto.Box
       Crypto.SecretBox
-  other-modules:
-      Paths_shecretbox
   hs-source-dirs:
       src
   default-extensions:
@@ -41,17 +35,16 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring  >= 0.9 && <1.0.0.0
-    , cryptonite  >= 0.27 && <1.0
+    , crypton  >= 1.0.0 && <2.0.0
     , memory  >= 0.18 && <1.0
   default-language: Haskell2010
 
-test-suite shecretbox-test
+test-suite crypton-box-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
       Crypto.BoxSpec
       Crypto.SecretBoxSpec
-      Paths_shecretbox
   hs-source-dirs:
       test
   default-extensions:
@@ -61,8 +54,8 @@ test-suite shecretbox-test
   build-depends:
       base >=4.7 && <5
     , bytestring
-    , cryptonite
+    , crypton
     , hspec
     , memory
-    , shecretbox
+    , crypton-box
   default-language: Haskell2010
