@@ -21,6 +21,9 @@ extra-source-files:
     README.md
     ChangeLog.md
 
+tested-with:
+    GHC == 9.4.8
+
 source-repository head
   type: git
   location: https://github.com/yutotakano/shecretbox
